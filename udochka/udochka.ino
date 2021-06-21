@@ -149,11 +149,18 @@ void loop() {
     */
   }
 
-  for(int i = 0; i < 3; i++) {
+  for(int i = 0; i < 2; i++) {
     analogWrite(led[i], 255);
     delay(25);
     analogWrite(led[i], 0.);
     delay(400);
+  }
+  analogWrite(led[1], 255);
+
+  if(digitalRead(pir) == HIGH) {
+    analogWrite(led[2], 50);
+  } else {
+    analogWrite(led[2], 0);
   }
 
   // enable stepper
