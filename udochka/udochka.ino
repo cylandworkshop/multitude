@@ -24,10 +24,17 @@ AudioConnection          patchCord5(mixer1, dac1);
 unsigned int freq = 40;
 int stp = 1;
 
+const uint16_t STEP_COUNT = 5000;
+const uint16_t STEP_DELAY = 500;
+
 NXPMotionSense imu;
 NXPSensorFusion filter;
 
 int count,count2 = 0;
+int step_en = 17;
+int step = 8;
+int dir = 9;
+int pir = 16;
 
 int int_led = 13;
 
@@ -43,10 +50,13 @@ void setup() {
 
   dac1.analogReference(EXTERNAL); // much louder!
   delay(50); // time for DAC voltage stable
+
+  // turn on the amplifier
   pinMode(5, OUTPUT); // enable amp
-  digitalWrite(5, HIGH); // turn on the amplifier
+  digitalWrite(5, HIGH);
+   
   delay(10); // allow time to wake up
-  // Serial.println ("PIN 5 SET HIGH");
+  
   AudioMemory(15);
 
   waveform1.begin(WAVEFORM_TRIANGLE);
@@ -61,6 +71,13 @@ void setup() {
   for(int i = 0; i < 3; i++) {
     pinMode(led[i], OUTPUT);
   }
+
+  pinMode(step_en, OUTPUT);
+  pinMode(step, OUTPUT);
+  pinMode(dir, OUTPUT);
+  pinMode(pir, INPUT_PULLDOWN);
+
+  digitalWrite(step, HIGH);
 }
 
 void loop() {
@@ -136,10 +153,39 @@ void loop() {
     analogWrite(led[i], 255);
     delay(25);
     analogWrite(led[i], 0.);
-    delay(250);
+    delay(400);
   }
+
+  // enable stepper
   digitalWrite(int_led, HIGH);
+  digitalWrite(step_en, HIGH);
+
+  delay(2000);
+
+  // rotate cw
+  digitalWrite(dir, LOW);
+  for(int i = 0; i < STEP_COUNT; i++) {
+    digitalWrite(step, LOW);
+    delayMicroseconds(50);
+    digitalWrite(step, HIGH);
+
+    delayMicroseconds(STEP_DELAY);
+  }
   
-  delay(400);
+  // rotate ccw
+  digitalWrite(dir, HIGH);
+  for(int i = 0; i < STEP_COUNT; i++) {
+    digitalWrite(step, LOW);
+    delayMicroseconds(50);
+    digitalWrite(step, HIGH);
+
+    delayMicroseconds(STEP_DELAY);
+  }
+
+  // disable stepper
+  
   digitalWrite(int_led, LOW);
+  digitalWrite(step_en, LOW);
+
+  delay(1000);
 }
