@@ -1,3 +1,6 @@
+#define ENCODER_OPTIMIZE_INTERRUPTS
+#include <Encoder.h>
+
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -16,16 +19,15 @@ AudioOutputAnalog        dac1;           //xy=620,318
 
 AudioConnection          patchCord2(waveform1, fade1);
 // AudioConnection          patchCord3(, 0, mixer1, 0);
-AudioConnection          patchCord3(waveform1, 0, mixer1, 0);
+AudioConnection          patchCord3(fade1, 0, mixer1, 0);
 AudioConnection          patchCord5(mixer1, dac1);
 // GUItool: end automatically generated code
-
 
 unsigned int freq = 40;
 int stp = 1;
 
-const uint16_t STEP_COUNT = 5000;
-const uint16_t STEP_DELAY = 500;
+const uint16_t STEP_COUNT = 50;
+const uint16_t STEP_DELAY = 8000;
 
 NXPMotionSense imu;
 NXPSensorFusion filter;
@@ -35,6 +37,10 @@ int step_en = 17;
 int step = 8;
 int dir = 9;
 int pir = 16;
+int encoder_a = 14;
+int encoder_b = 15;
+
+Encoder enc(encoder_a, encoder_b);
 
 int int_led = 13;
 
@@ -64,7 +70,7 @@ void setup() {
   waveform1.amplitude(1.0);
 
   // Set initial volume
-  mixer1.gain(0, 0.9);
+  mixer1.gain(0, 0.5);
 
   pinMode(int_led, OUTPUT);
 
@@ -77,7 +83,16 @@ void setup() {
   pinMode(dir, OUTPUT);
   pinMode(pir, INPUT_PULLDOWN);
 
+  // pinMode(encoder_a, INPUT);
+  // pinMode(encoder_b, INPUT);
+
   digitalWrite(step, HIGH);
+
+  // enable stepper
+  digitalWrite(int_led, HIGH);
+  digitalWrite(step_en, HIGH);
+
+  delay(500);
 }
 
 void loop() {
@@ -118,7 +133,8 @@ void loop() {
     aud1 = abs(gy);
     aud2 = abs(gx);
 
-    waveform1.amplitude(0.5 * (1.0 + ax));
+    // waveform1.amplitude(0.5 * (1.0 + ax));
+    waveform1.amplitude(1.);
 
     /*
     if (aud1 < 3 && count > 150) {
@@ -149,50 +165,67 @@ void loop() {
     */
   }
 
-  for(int i = 0; i < 2; i++) {
-    analogWrite(led[i], 255);
-    delay(25);
-    analogWrite(led[i], 0.);
-    delay(400);
-  }
-  analogWrite(led[1], 255);
-
-  if(digitalRead(pir) == HIGH) {
-    analogWrite(led[2], 50);
-  } else {
+  if(digitalRead(pir) == LOW) {
+    analogWrite(led[0], 0);
+    analogWrite(led[1], 0);
     analogWrite(led[2], 0);
+    waveform1.amplitude(0.);
+    
+    digitalWrite(int_led, LOW);
+    digitalWrite(step_en, LOW);
+    
+    delay(10);
+    return;
+  } else {
+    analogWrite(led[2], 10);
+    digitalWrite(int_led, HIGH);
+    digitalWrite(step_en, HIGH);
   }
-
-  // enable stepper
-  digitalWrite(int_led, HIGH);
-  digitalWrite(step_en, HIGH);
-
-  delay(2000);
 
   // rotate cw
   digitalWrite(dir, LOW);
   for(int i = 0; i < STEP_COUNT; i++) {
+    analogWrite(led[0], 255);
+    analogWrite(led[1], 0);
     digitalWrite(step, LOW);
     delayMicroseconds(50);
+    analogWrite(led[0], 0);
+    analogWrite(led[1], 255);
     digitalWrite(step, HIGH);
 
     delayMicroseconds(STEP_DELAY);
+
+    int angle = enc.read();
+    waveform1.frequency(200 + angle * 5);
   }
   
   // rotate ccw
-  digitalWrite(dir, HIGH);
+  // digitalWrite(dir, HIGH);
   for(int i = 0; i < STEP_COUNT; i++) {
+    analogWrite(led[0], 0);
+    analogWrite(led[1], 255);
     digitalWrite(step, LOW);
     delayMicroseconds(50);
+    analogWrite(led[0], 255);
+    analogWrite(led[1], 0);
     digitalWrite(step, HIGH);
 
     delayMicroseconds(STEP_DELAY);
+
+    int angle = enc.read();
+    // waveform1.frequency(200 + angle * 5);
   }
 
-  // disable stepper
-  
-  digitalWrite(int_led, LOW);
-  digitalWrite(step_en, LOW);
+  waveform1.frequency(freq);
 
-  delay(1000);
+  fade1.fadeIn(1);
+  delay(50);
+  fade1.fadeOut(40);
+
+  
+  freq *= 1.3;
+  if(freq > 1400) freq -= 1124 + enc.read();
+  
+
+  delay(100);
 }
