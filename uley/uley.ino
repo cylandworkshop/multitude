@@ -7,6 +7,7 @@
 #include <NXPMotionSense.h>
 #include <Wire.h>
 #include <EEPROM.h>
+#include <Adafruit_NeoPixel.h>
 
 // GUItool: begin automatically generated code
 AudioSynthWaveform       waveform1;      //xy=188,305
@@ -24,8 +25,8 @@ AudioConnection          patchCord5(mixer1, dac1);
 unsigned int freq = 40;
 int stp = 1;
 
-const uint16_t STEP_COUNT = 1;
-const uint16_t STEP_DELAY = 8000;
+const uint16_t STEP_COUNT = 10;
+const uint16_t STEP_DELAY = 5000;
 
 NXPMotionSense imu;
 NXPSensorFusion filter;
@@ -39,8 +40,12 @@ int int_led = 13;
 int sharp[] = {22, 23};
 int led_strip = 21;
 
+const int NUM_LEDS = 60;
+
 Servo servo;
 
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, led_strip, NEO_RGB + NEO_KHZ800);
+int brightness = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -74,6 +79,10 @@ void setup() {
   pinMode(dir, OUTPUT);
 
   servo.attach(servo_pin);
+
+  strip.begin();
+  strip.setBrightness(100);
+  strip.clear();
 }
 
 void loop() {
@@ -152,10 +161,10 @@ void loop() {
   digitalWrite(dir, LOW);
   for(int i = 0; i < STEP_COUNT; i++) {
     digitalWrite(step, LOW);
-    delayMicroseconds(50);
+    delayMicroseconds(200);
     digitalWrite(step, HIGH);
 
-    delayMicroseconds(STEP_DELAY);
+    delayMicroseconds(analogRead(sharp[1]));
   }
   
   waveform1.frequency(analogRead(sharp[0]));
@@ -167,7 +176,32 @@ void loop() {
   // fade1.fadeOut(40);
 
   digitalWrite(int_led, LOW);
+
+  for(int n = NUM_LEDS; n > 0; n--) {
+    strip.clear();
+    
+    for(int i = 0; i < 10; i++) {
+      int n_i = (n + i - 5) % NUM_LEDS;
+      
+      int r = (brightness * 7) % 256 * (5 - abs(i - 5))/5;
+      int g = (brightness * 3 + n_i) % 256 * (5 - abs(i - 5))/10;
+      int b = (brightness * 5 + 2 * n_i) % 256 * (5 - abs(i - 5))/10;
+      strip.setPixelColor(n_i, b | (g << 8) | (r << 16));
+    }
+    
+    strip.show();
+  
+    brightness++;
+    
+    if(brightness > 100) {
+      brightness = 0;
+    }
+    
+    delay(15);
+  }
+  strip.clear();
+  strip.show();
   
 
-  delay(5);
+  delay(analogRead(sharp[0])/10);
 }
