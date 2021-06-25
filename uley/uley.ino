@@ -79,11 +79,14 @@ void setup() {
   pinMode(dir, OUTPUT);
 
   servo.attach(servo_pin);
+  servo.write(10);
 
   strip.begin();
   strip.setBrightness(100);
   strip.clear();
 }
+
+int color = 0;
 
 void loop() {
   /*float ax, ay, az;
@@ -164,12 +167,13 @@ void loop() {
     delayMicroseconds(200);
     digitalWrite(step, HIGH);
 
-    delayMicroseconds(analogRead(sharp[1]));
+    delayMicroseconds(1000 + analogRead(sharp[1]) * 100);
   }
   
   waveform1.frequency(analogRead(sharp[0]));
-  waveform1.amplitude(1. - analogRead(sharp[1])/1000.);
-  servo.write(analogRead(sharp[0])/4);
+  // waveform1.amplitude(1. - analogRead(sharp[1])/1000.);
+  waveform1.amplitude(0.2);
+  // servo.write(analogRead(sharp[0])/4);
 
   // fade1.fadeIn(1);
   // delay(50);
@@ -177,7 +181,13 @@ void loop() {
 
   digitalWrite(int_led, LOW);
 
-  for(int n = NUM_LEDS; n > 0; n--) {
+  strip.setPixelColor(0, color);
+  color += 10;
+  if(color > 255) color = 0;
+  
+  strip.show();
+
+  /*for(int n = NUM_LEDS; n > 0; n--) {
     strip.clear();
     
     for(int i = 0; i < 10; i++) {
@@ -200,7 +210,7 @@ void loop() {
     delay(15);
   }
   strip.clear();
-  strip.show();
+  strip.show();*/
   
 
   delay(analogRead(sharp[0])/10);

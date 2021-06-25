@@ -26,8 +26,8 @@ AudioConnection          patchCord5(mixer1, dac1);
 unsigned int freq = 40;
 int stp = 1;
 
-const uint16_t STEP_COUNT = 50;
-const uint16_t STEP_DELAY = 8000;
+const uint16_t STEP_COUNT = 100;
+const uint16_t STEP_DELAY = 10000;
 
 NXPMotionSense imu;
 NXPSensorFusion filter;
@@ -165,7 +165,7 @@ void loop() {
     */
   }
 
-  if(digitalRead(pir) == LOW) {
+  if(digitalRead(pir) == LOW && 0) {
     analogWrite(led[0], 0);
     analogWrite(led[1], 0);
     analogWrite(led[2], 0);
