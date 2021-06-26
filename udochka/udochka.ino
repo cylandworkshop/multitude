@@ -26,8 +26,8 @@ AudioConnection          patchCord5(mixer1, dac1);
 unsigned int freq = 40;
 int stp = 1;
 
-const uint16_t STEP_COUNT = 100;
-const uint16_t STEP_DELAY = 10000;
+const uint16_t STEP_COUNT = 1000;
+const uint16_t STEP_DELAY = 100;
 
 NXPMotionSense imu;
 NXPSensorFusion filter;
@@ -70,12 +70,13 @@ void setup() {
   waveform1.amplitude(1.0);
 
   // Set initial volume
-  mixer1.gain(0, 0.5);
+  mixer1.gain(0, 0.9);
 
   pinMode(int_led, OUTPUT);
 
   for(int i = 0; i < 3; i++) {
     pinMode(led[i], OUTPUT);
+    digitalWrite(led[i], LOW);
   }
 
   pinMode(step_en, OUTPUT);
@@ -92,140 +93,109 @@ void setup() {
   digitalWrite(int_led, HIGH);
   digitalWrite(step_en, HIGH);
 
+  waveform1.amplitude(1.);
+  fade1.fadeOut(40);
+
   delay(500);
 }
 
-void loop() {
-  float ax, ay, az;
-  float gx, gy, gz, aud1, aud2;
-  float mx, my, mz;
-  float roll, pitch, heading;
-
-  if (imu.available()) {
-    // Read the motion sensors
-    imu.readMotionSensor(ax, ay, az, gx, gy, gz, mx, my, mz);
-
-    // Update the SensorFusion filter
-    filter.update(gx, gy, gz, ax, ay, az, mx, my, mz);
-
-    // print the heading, pitch and roll
-    roll = filter.getRoll();
-    pitch = filter.getPitch();
-    // heading = filter.getYaw();
-    Serial.print(ax);
-    Serial.print(',');
-    Serial.print(ay);
-    // Serial.print(',');
-    // Serial.print(az);
-    // Serial.print(',');
-    Serial.print(gx);
-    // Serial.print(',');
-    Serial.print(gy);
-    // Serial.print(',');
-    // Serial.print(gz);
-    // Serial.print(',');
-    //    Serial.print(mx);
-    //    Serial.print(',');
-    //    Serial.print(my);
-    //    Serial.print(',');
-    //    Serial.print(mz);
-    Serial.println();
-    aud1 = abs(gy);
-    aud2 = abs(gx);
-
-    // waveform1.amplitude(0.5 * (1.0 + ax));
-    waveform1.amplitude(1.);
-
-    /*
-    if (aud1 < 3 && count > 150) {
-      fade1.fadeOut(1000);
-      //waveform1.amplitude(0);
-    }//was 0.5 }
-    if (aud1 > 3) {
-      fade1.fadeIn(100);
-      waveform1.amplitude(1);
-      freq = map(aud1, 1, 200, 60, 1000);
-      waveform1.frequency(freq);
-      count = 0;
-    }
-    if (aud2 < 3 && count2 > 50) {
-      fade2.fadeOut(500);
-      //waveform1.amplitude(0);
-    }//was 0.5 }
-    if (aud2 > 3) {
-      fade2.fadeIn(100);
-      waveform2.amplitude(1);
-      freq = map(aud2, 1, 200, 60, 1000);
-      waveform2.frequency(freq);
-      count2 = 0;
-    }
-    
-    count ++;
-    count2 ++;
-    */
-  }
-
-  if(digitalRead(pir) == LOW && 0) {
-    analogWrite(led[0], 0);
-    analogWrite(led[1], 0);
-    analogWrite(led[2], 0);
-    waveform1.amplitude(0.);
-    
-    digitalWrite(int_led, LOW);
-    digitalWrite(step_en, LOW);
-    
-    delay(10);
-    return;
-  } else {
-    analogWrite(led[2], 10);
-    digitalWrite(int_led, HIGH);
-    digitalWrite(step_en, HIGH);
-  }
-
-  // rotate cw
-  digitalWrite(dir, LOW);
-  for(int i = 0; i < STEP_COUNT; i++) {
-    analogWrite(led[0], 255);
-    analogWrite(led[1], 0);
-    digitalWrite(step, LOW);
-    delayMicroseconds(50);
-    analogWrite(led[0], 0);
-    analogWrite(led[1], 255);
-    digitalWrite(step, HIGH);
-
-    delayMicroseconds(STEP_DELAY);
-
-    int angle = enc.read();
-    waveform1.frequency(200 + angle * 5);
-  }
-  
-  // rotate ccw
-  // digitalWrite(dir, HIGH);
-  for(int i = 0; i < STEP_COUNT; i++) {
-    analogWrite(led[0], 0);
-    analogWrite(led[1], 255);
-    digitalWrite(step, LOW);
-    delayMicroseconds(50);
-    analogWrite(led[0], 255);
-    analogWrite(led[1], 0);
-    digitalWrite(step, HIGH);
-
-    delayMicroseconds(STEP_DELAY);
-
-    int angle = enc.read();
-    // waveform1.frequency(200 + angle * 5);
-  }
-
+void handle_enc() {
   waveform1.frequency(freq);
 
   fade1.fadeIn(1);
+  digitalWrite(led[0], HIGH);
   delay(50);
+  digitalWrite(led[0], LOW);
   fade1.fadeOut(40);
-
   
   freq *= 1.3;
-  if(freq > 1400) freq -= 1124 + enc.read();
-  
+  if(freq > 1400) freq -= 1124;
+}
 
-  delay(100);
+void update() {
+  static int current_enc = 0;
+
+  int enc_value = abs(enc.read());
+  if(enc_value > 47) { // full round
+    enc.write(1);
+    enc_value = 1;
+  }
+
+  enc_value = enc_value * 10 / 48;
+  
+  if(enc_value != current_enc) {
+    current_enc = enc_value;
+    handle_enc();
+  }
+}
+
+int timeout = 0;
+const int TIMEOUT = 5000;
+
+uint32_t motor_time = 0;
+
+bool run = false;
+
+void loop() {
+  if(digitalRead(pir) == HIGH) {
+    timeout = millis();
+  }
+
+  if((millis() - timeout) > TIMEOUT) {
+    // analogWrite(led[0], 0);
+    // analogWrite(led[1], 0);
+
+    if(run) {
+      // go to sleep
+      run = false;
+      
+      
+    
+      digitalWrite(int_led, LOW);
+      digitalWrite(step_en, LOW);
+
+      analogWrite(led[2], 5);
+
+      delay(30000); // cooldown
+      waveform1.amplitude(0.);
+    }
+    
+    delay(100);
+    return;
+  } else {
+    if(!run) {
+      // wake up
+      run = true;
+
+      motor_time = millis();
+      
+      waveform1.amplitude(1.);
+      analogWrite(led[2], 0);
+      digitalWrite(int_led, HIGH);
+      digitalWrite(step_en, HIGH);
+    }
+  }
+
+  int motor_phase = ((millis() - motor_time) / 1000) % 60;
+  if(motor_phase < 30) {
+    digitalWrite(step_en, HIGH);
+
+    int step_time = (6 - motor_phase/10);
+
+    digitalWrite(dir, LOW);
+    // analogWrite(led[0], 0);
+    // analogWrite(led[1], 255);
+    for(int i = 0; i < STEP_COUNT; i++) {
+      digitalWrite(step, LOW);
+      delayMicroseconds(100);
+      digitalWrite(step, HIGH);
+  
+      update();
+  
+      delay(step_time);
+    }
+  } else {
+    digitalWrite(step_en, LOW);
+    update();
+  }
 }
