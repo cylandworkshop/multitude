@@ -23,7 +23,7 @@ AudioConnection          patchCord3(fade1, 0, mixer1, 0);
 AudioConnection          patchCord5(mixer1, dac1);
 // GUItool: end automatically generated code
 
-unsigned int freq = 40;
+unsigned int freq = 440;
 int stp = 1;
 
 const uint16_t STEP_COUNT = 1000;
@@ -136,51 +136,11 @@ uint32_t motor_time = 0;
 
 bool run = false;
 
+int work_time = 0;
+
 void loop() {
-  if(digitalRead(pir) == HIGH) {
-    timeout = millis();
-  }
-
-  if((millis() - timeout) > TIMEOUT) {
-    // analogWrite(led[0], 0);
-    // analogWrite(led[1], 0);
-
-    if(run) {
-      // go to sleep
-      run = false;
-      
-      
-    
-      digitalWrite(int_led, LOW);
-      digitalWrite(step_en, LOW);
-
-      analogWrite(led[2], 5);
-
-      delay(30000); // cooldown
-      waveform1.amplitude(0.);
-    }
-    
-    delay(100);
-    return;
-  } else {
-    if(!run) {
-      // wake up
-      run = true;
-
-      motor_time = millis();
-      
-      waveform1.amplitude(1.);
-      analogWrite(led[2], 0);
-      digitalWrite(int_led, HIGH);
-      digitalWrite(step_en, HIGH);
-    }
-  }
-
-  int motor_phase = ((millis() - motor_time) / 1000) % 60;
-  if(motor_phase < 30) {
-    digitalWrite(step_en, HIGH);
-
-    int step_time = (6 - motor_phase/10);
+  if((millis() - work_time) < 60000) {
+    int step_time = 3; // (6 - motor_phase/10);
 
     digitalWrite(dir, LOW);
     // analogWrite(led[0], 0);
@@ -195,7 +155,28 @@ void loop() {
       delay(step_time);
     }
   } else {
+    // stop rotating
     digitalWrite(step_en, LOW);
-    update();
+  }
+
+  if((millis() - work_time) > 100000) {
+    digitalWrite(int_led, LOW);
+    digitalWrite(step_en, LOW);
+    waveform1.amplitude(0.);
+    analogWrite(led[2], 2);
+      
+    // wait for PIR
+    while(digitalRead(pir) == LOW) {
+      delay(100);
+    }
+
+    // wakeup again
+    work_time = millis();
+
+    waveform1.amplitude(1.);
+    analogWrite(led[2], 0);
+    digitalWrite(int_led, HIGH);
+      
+    digitalWrite(step_en, HIGH);
   }
 }
