@@ -30,15 +30,24 @@ NXPMotionSense imu;
 NXPSensorFusion filter;
 
 int servo_pin = 9;
-int step = 4;
-int dir = 6;
+
+int step_0 = 4;
+int dir_0 = 6;
+
+int step_1 = 15;
+int dir_1 = 16;
+int en = 17;
 
 int int_led = 13;
 
 int sharp[] = {22, 23};
 int led_strip = 21;
+int amp_en = 5;
 
 const int NUM_LEDS = 60;
+
+int end_a = 10;
+int end_b = 11;
 
 Servo servo;
 
@@ -47,23 +56,16 @@ int brightness = 0;
 
 void setup() {
   Serial.begin(9600);
+  
   imu.begin();
   filter.begin(50);
   
   dac1.analogReference(EXTERNAL); // much louder!
   delay(50); // time for DAC voltage stable
-
-  // turn on the amplifier
-  pinMode(5, OUTPUT); // enable amp
-  digitalWrite(5, HIGH);
-   
-  delay(10); // allow time to wake up
   
   AudioMemory(15);
 
   waveform1.begin(WAVEFORM_TRIANGLE);
-  waveform1.frequency(100);
-  waveform1.amplitude(1.0);
 
   // Set initial volume
   mixer1.gain(0, 0.9);
@@ -73,26 +75,122 @@ void setup() {
   pinMode(sharp[0], INPUT);
   pinMode(sharp[1], INPUT);
   
-  pinMode(step, OUTPUT);
-  pinMode(dir, OUTPUT);
+  pinMode(step_0, OUTPUT);
+  pinMode(dir_0, OUTPUT);
+  
+  pinMode(step_1, OUTPUT);
+  pinMode(dir_1, OUTPUT);
+  pinMode(en, OUTPUT);
+  
+  digitalWrite(en, HIGH);
 
-  servo.attach(servo_pin);
-  servo.write(140);
+  pinMode(amp_en, OUTPUT);
+  digitalWrite(amp_en, LOW);
+
+  pinMode(end_a, INPUT);
+  pinMode(end_b, INPUT);
 
   strip.begin();
   strip.setBrightness(100);
   strip.clear();
+
+  randomSeed(analogRead(sharp[0]));
 }
 
 int color = 0;
 int beep_delay = 0;
 unsigned int count = 0;
 
-void loop() {
-  float ax, ay, az;
-  float gx, gy, gz, gx_abs, gy_abs;
-  float mx, my, mz;
+void test_stepper() {
+  int r = random(100, 300);
+  const int STEPS = 50;
+  
+  digitalWrite(en, LOW);
+  delay(50);
+  
+  digitalWrite(dir_0, HIGH);
+  for(int i = 0; i < STEPS; i++) {
+    digitalWrite(step_0, LOW);
+    delayMicroseconds(20);
+    digitalWrite(step_0, HIGH);
 
+    delayMicroseconds(500 + r * 50);
+  }
+  digitalWrite(dir_0, LOW);
+  for(int i = 0; i < STEPS; i++) {
+    digitalWrite(step_0, LOW);
+    delayMicroseconds(20);
+    digitalWrite(step_0, HIGH);
+
+    delayMicroseconds(500 + r * 50);
+  }
+
+  digitalWrite(dir_1, HIGH);
+  for(int i = 0; i < STEPS; i++) {
+    digitalWrite(step_1, LOW);
+    delayMicroseconds(20);
+    digitalWrite(step_1, HIGH);
+
+    delayMicroseconds(500 + r * 50);
+  }
+  digitalWrite(dir_1, LOW);
+  for(int i = 0; i < STEPS; i++) {
+    digitalWrite(step_1, LOW);
+    delayMicroseconds(20);
+    digitalWrite(step_1, HIGH);
+
+    delayMicroseconds(500 + r * 50);
+  }
+  digitalWrite(en, HIGH);
+}
+
+void test_sound() {
+  digitalWrite(amp_en, HIGH);
+  delay(20);
+
+  int r = random(100, 300);
+  waveform1.amplitude(0.5);
+  waveform1.frequency(r);
+
+  delay(100);
+
+  waveform1.amplitude(0.0);
+  
+  digitalWrite(amp_en, LOW);
+}
+
+void test_rgb() {
+  strip.clear();
+  strip.setPixelColor(0, 255, 0, 0);
+  strip.show();
+  delay(100);
+  strip.setPixelColor(1, 0, 255, 0);
+  strip.show();
+  delay(100);
+  strip.setPixelColor(2, 0, 0, 255);
+  strip.show();
+  delay(500);
+  strip.clear();
+  strip.show();
+}
+// 30..160
+void test_servo() {
+  servo.attach(servo_pin);
+  delay(1);
+  servo.write(30);
+  delay(300);
+  servo.write(160);
+  delay(300);
+  servo.write(30);
+  delay(100);
+  servo.detach();
+}
+
+void test_sensors() {
+  static float ax, ay, az;
+  static float gx, gy, gz, gx_abs, gy_abs;
+  static float mx, my, mz;
+  
   if (imu.available()) {
     // Read the motion sensors
     imu.readMotionSensor(ax, ay, az, gx, gy, gz, mx, my, mz);
@@ -102,72 +200,21 @@ void loop() {
     
     gy_abs = abs(gy);
     gx_abs = abs(gx);
+
+    Serial.printf("ax: %f, ay: %f, az: %f\n", ax, ay, az);
   }
 
-  int distance = max(analogRead(sharp[0]), analogRead(sharp[1]));
+  Serial.printf("distance a: %d, b: %d\n", analogRead(sharp[0]), analogRead(sharp[1]));
+
+  Serial.printf("end a: %d, b: %d\n", digitalRead(end_a), digitalRead(end_b));
+}
+
+void loop() {
+  test_stepper();
+  test_sound();
+  test_servo();
+  test_rgb();
+  test_sensors();
   
-
-  digitalWrite(int_led, HIGH);
-
-  // rotate cw
-  digitalWrite(dir, count > 120 ? LOW : HIGH);
-  for(int i = 0; i < 20 * gy_abs * gx_abs; i++) {
-    digitalWrite(step, LOW);
-    delayMicroseconds(200);
-    digitalWrite(step, HIGH);
-
-    delayMicroseconds(6000 + distance * 2);
-  }
-  
-  if((count - beep_delay) == 20){
-    waveform1.frequency(480 * pow(2, (random(7) % 2) * 4./12.));
-    waveform1.amplitude(0.9);
-    
-    if(distance < 100) {
-      servo.write(80);
-    }
-    
-    fade1.fadeIn(1);
-    delay(10);
-    fade1.fadeOut(90);
-    delay(5);
-    fade1.fadeIn(2);
-    delay(5);
-    fade1.fadeOut(70);
-  }
-  
-  if((count - beep_delay) > 26) {
-    beep_delay = count;
-    servo.write(140);
-  }
-
-  digitalWrite(int_led, LOW);
-
-  strip.clear();
-
-  int r = 0;
-  int g = 0;
-  int b = 0;
-  
-  if(distance > 100) {
-    r = 70 * (count % 2);
-  } else {
-    b =  random (30);
-    r = brightness + (count % 2);
-  }
-    
-  for(int n = 0; n < NUM_LEDS; n++) {
-    strip.setPixelColor(n, b | (r << 8) | (g << 16));
-  }
-  strip.show();
-
-  brightness += 10;
-  if(brightness > 100) {
-    brightness = 0;
-  }
-    
-  count++;
-  if(count > 400) count = 0;
-
-  delay(20 + distance/5);
+  delay(1000);
 }
