@@ -14,6 +14,7 @@
 #include "math/vec.hpp"
 #include "font.hpp"
 #include "scene.hpp"
+#include "encoder.hpp"
 
 #include <sdlpp.hpp>
 
@@ -94,9 +95,17 @@ void DrawPoint(sdl::Renderer& renderer, Vec2 p)
     renderer.fillRect(&rect);
 }
 
+uint32_t millis()
+{
+    static const auto start = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+}
 
 int main()
 {
+    EncoderState ENCODER = {};
+    float ENCODER_PREV_ANGLE = 0;
+
     std::cout << "Deltas: " << (float(PIXEL_HALF_STEP) / float(fp_t::Epsilon)) << std::endl;
     sdl::Init init{SDL_INIT_EVERYTHING};
     sdl::Window w{"Ledder", 63, 126, 800, 800, SDL_WINDOW_BORDERLESS};
@@ -109,23 +118,35 @@ int main()
       done = true;
     };
 
-    fp_t angle = 0;
+    uint32_t prevT = millis();
 
     while(!done)
     {
         while(e.poll()) {}
 
-        angle += 0.03125;
-        if (angle >= 1)
+        auto const t = millis();
+
+        if (Duration(prevT, t) > 100)
         {
-            angle -= 1;
+            ENCODER.Update(t, ENCODER.state + 2);
+            prevT = t;
         }
+
+        auto const angle = ENCODER.GetAngle(t);
+
+        if (angle == ENCODER_PREV_ANGLE)
+        {
+            continue;
+        }
+
+        ENCODER_PREV_ANGLE = angle;
+
 
         renderer.setDrawColor(0xff, 0xff, 0xff, 0xff);
         renderer.clear();
         renderer.setDrawColor(0x00, 0x00, 0x00, 0xff);
 
-        for (size_t x = 0; x < WINDOW_WIDTH; ++x)
+        /*for (size_t x = 0; x < WINDOW_WIDTH; ++x)
         {
             for (size_t y = 0; y < WINDOW_HEIGHT; ++y)
             {
@@ -138,11 +159,11 @@ int main()
                     renderer.drawPoint(x, y);
                 }
             }
-        }
+        }*/
 
         renderer.setDrawColor(0xff, 0x00, 0xff, 0xff);
 
-        ForEachDisplayPixel(angle, [&](Vec2 p)
+        ForEachDisplayPixel(angle, [&](Vec2 p, auto, auto)
         {
             auto const r = Sqrt(p.x * p.x + p.y * p.y);
             auto const midpoint = (SCENE.R_IN + SCENE.R_OUT) / 2;
@@ -158,7 +179,7 @@ int main()
         // // DrawPoint(renderer, DisplayPixel(0.75, 0, 0));
         // DrawPoint(renderer, Vec2{-0.5, -0.5});
         renderer.present();
-        // std::this_thread::sleep_for(6ms);
+        // std::this_thread::sleep_for(16ms);
     }
     // auto const c = 'A';
 

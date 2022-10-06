@@ -12,7 +12,7 @@ constexpr fp_t PIXEL_HALF_STEP = PIXEL_STEP / 2;
 
 constexpr struct
 {
-    fp_t R_TABLE = 0.8333 - TABLE_HEIGHT;
+    fp_t R_TABLE = 0.766667 + PIXEL_HALF_STEP;
     fp_t R_IN = R_TABLE + PIXEL_HALF_STEP;
     fp_t R_OUT = R_TABLE + TABLE_HEIGHT - PIXEL_HALF_STEP;
 } SCENE;
@@ -33,12 +33,12 @@ void ForEachDisplayPixel(fp_t angle, Fn&& fn)
 {
     Rot2 r{angle};
 
-    for (int i = 0; i < 16; ++i)
+    for (unsigned i = 0; i < 16; ++i)
     {
-        for (int j = 0; j < 32; ++j)
+        for (unsigned j = 0; j < 32; ++j)
         {
             auto pos = DisplayPixel(r, i, j);
-            fn(pos);
+            fn(pos, i, j);
         }
     }
 }
