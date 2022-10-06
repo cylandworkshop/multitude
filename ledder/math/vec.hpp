@@ -13,8 +13,12 @@ public:
 
     constexpr Vec2Base(Vec2Base const&) noexcept = default;
     constexpr Vec2Base(Vec2Base &&) noexcept = default;
-    constexpr Vec2Base& operator=(Vec2Base const&) noexcept = default;
-    constexpr Vec2Base& operator=(Vec2Base &&) noexcept = default;
+    constexpr Vec2Base<T>& operator=(Vec2Base<T> const& other) noexcept
+    {
+        x = other.x;
+        y = other.y;
+        return *this;
+    }
 
     constexpr Vec2Base operator+(Vec2Base const& v) const noexcept
     {
