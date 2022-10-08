@@ -102,6 +102,31 @@ Vec2 ToBox(Vec2 const& v, Vec2 const& ll, Vec2 const& ur)
     return Vec2{x, y} / (SCENE.UR_TEXT - SCENE.LL_TEXT);
 }
 
+Vec2u ToBoxFont(Vec2 const& v, Vec2 const& ll, Vec2 const& ur)
+{
+    constexpr fp_t FONT_X_STEP = SCENE_FLOAT::H_TEXT / FONT_H;
+    constexpr fp_t FONT_Y_STEP = SCENE_FLOAT::W_TEXT / FONT_W;
+
+    fp_t x, y;
+    x = v.x - ll.x;
+    y = v.y - ll.y;
+
+    auto fx = y.getFraction() / FONT_Y_STEP.getFraction();
+    auto fy = x.getFraction() / FONT_X_STEP.getFraction();
+
+    if (fx >= FONT_W)
+    {
+        fx = FONT_W - 1;
+    }
+
+    if (fy >= FONT_H)
+    {
+        fy = FONT_H -1;
+    }
+
+    return Vec2u{static_cast<uint8_t>(fx), static_cast<uint8_t>(fy)};
+}
+
 Vec2 DisplayPixel(Rot2 r, int x, int y)
 {
     auto pc = Vec2{y * SCENE.PIXEL_STEP + SCENE.R_TABLE, x * SCENE.PIXEL_STEP - SCENE.TABLE_WIDTH};

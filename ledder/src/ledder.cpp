@@ -232,7 +232,8 @@ void loop() {
             {
                 // ++numInBox;
                 // led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
-                auto const bc = ToBox(tp, SCENE.LL_TEXT, SCENE.UR_TEXT);
+                // auto const bc = ToBox(tp, SCENE.LL_TEXT, SCENE.UR_TEXT);
+                auto const bc = ToBoxFont(tp, SCENE.LL_TEXT, SCENE.UR_TEXT);
                 if (SampleFont('A' + sector, bc.x, bc.y))
                 {
                     // DrawPoint(renderer, p);

@@ -14,34 +14,37 @@ uint32_t Duration(uint32_t t0, uint32_t t1)
 
 struct EncoderState
 {
-    static constexpr size_t DURATIONS_NUM = 4;
     static constexpr float ALPHA = 0.05;
-    int8_t state = 0;
+    uint8_t state = 0;
     int8_t lastStepSize = 0;
     uint32_t lastUpdateTs = 0;
-    uint32_t updateDurations[DURATIONS_NUM] = {};
+    uint32_t updateDurationCurrent = 0;
     float updateDuration = 0;
-    uint8_t currentUpdateIdx = 0;
 
-    void Update(uint32_t ts, uint32_t dt, int8_t step)
+    void Update(uint32_t ts, uint32_t dt, uint8_t step)
     {
-        if (state != step)
+        if (state != step && (step > state || (state - step > ENCODER_STEPS / 2)))
         {
-            // updateDurations[currentUpdateIdx] = Duration(lastUpdateTs, t);
-            // currentUpdateIdx = (currentUpdateIdx + 1) % DURATIONS_NUM;
-            if (dt > 100)
-            {
-                updateDuration = ALPHA * dt + (1 - ALPHA) * updateDuration;
-            }
-            // lastStepSize = step - state;
-            // Serial.println(Duration(lastUpdateTs, t));
-            if (lastStepSize < 0)
-            {
-                lastStepSize = 1;
-            }
+            updateDurationCurrent += dt;
+            dt = updateDurationCurrent;
 
-            state = step;
-            lastUpdateTs = ts;
+            // if (dt > 100)
+            // {
+                updateDurationCurrent = 0;
+                updateDuration = ALPHA * dt + (1 - ALPHA) * updateDuration;
+
+                if (lastStepSize < 0)
+                {
+                    lastStepSize = 1;
+                }
+
+                state = step;
+                lastUpdateTs = ts;
+            // }
+        }
+        else
+        {
+            updateDurationCurrent += dt;
         }
     }
 
