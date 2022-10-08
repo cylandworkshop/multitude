@@ -13,11 +13,14 @@ using Vec2u = Vec2Base<uint8_t>;
 
 struct SCENE_FLOAT
 {
-    static constexpr float TABLE_HEIGHT = 0.103;
+    static constexpr float MAX_R_MM = 2500;
+    static constexpr float TABLE_HEIGHT_MM = 320;
+    static constexpr float TABLE_R_MM = 2000;
+    static constexpr float TABLE_HEIGHT = TABLE_HEIGHT_MM / MAX_R_MM;
     static constexpr float TABLE_WIDTH = TABLE_HEIGHT / 2;
     static constexpr float PIXEL_STEP = TABLE_HEIGHT / 31;
     static constexpr float PIXEL_HALF_STEP = PIXEL_STEP / 2;
-    static constexpr float R_TABLE = 0.766667 + PIXEL_HALF_STEP;
+    static constexpr float R_TABLE = TABLE_R_MM / MAX_R_MM + PIXEL_HALF_STEP;
     static constexpr float R_IN = R_TABLE + PIXEL_HALF_STEP;
     static constexpr float R_OUT = R_TABLE + TABLE_HEIGHT - PIXEL_HALF_STEP;
     static constexpr float R_TEXT = R_TABLE + 5 * PIXEL_STEP;
@@ -69,7 +72,11 @@ static const Rotations SECTOR_ROTATIONS = FillRotations();
 uint8_t AngleToSector(fp_t angle)
 {
     constexpr fp_t SECTOR_STEP = 1.0 / NUM_SECTORS;
+    constexpr fp_t SECTOR_HALF_STEP = 1.0 / NUM_SECTORS / 2;
+
     constexpr auto SECTOR_STEP_INT = SECTOR_STEP.getFraction();
+
+    angle += SECTOR_HALF_STEP;
 
     if (angle < 0)
     {
@@ -112,7 +119,7 @@ void ForEachDisplayPixel(fp_t angle, Fn&& fn)
     Rot2 r{angle};
     Vec2 psx = r.Apply(Vec2{SCENE.PIXEL_STEP, 0});
     Vec2 psy = r.Apply(Vec2{0, SCENE.PIXEL_STEP});
-    Vec2 start = r.Apply(Vec2{SCENE.R_TABLE, -SCENE.TABLE_WIDTH});
+    Vec2 start = r.Apply(Vec2{SCENE.R_TABLE, -SCENE.TABLE_WIDTH / 2});
 
     for (unsigned i = 0; i < 16; ++i)
     {

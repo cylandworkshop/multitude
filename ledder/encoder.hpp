@@ -23,7 +23,7 @@ struct EncoderState
     float updateDuration = 0;
     uint8_t currentUpdateIdx = 0;
 
-    void Update(uint32_t dt, int8_t step)
+    void Update(uint32_t ts, uint32_t dt, int8_t step)
     {
         if (state != step)
         {
@@ -41,7 +41,7 @@ struct EncoderState
             }
 
             state = step;
-            lastUpdateTs = millis();
+            lastUpdateTs = ts;
         }
     }
 

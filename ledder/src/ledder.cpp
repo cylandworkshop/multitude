@@ -90,7 +90,7 @@ void TryUpdateAfterPreamble()
   }
 
   dt = (static_cast<uint16_t>(dt2) << 8) | static_cast<uint8_t>(dt1);
-  ENCODER.Update(dt, abs(position) % ENCODER_STEPS);
+  ENCODER.Update(millis(), dt, abs(position) % ENCODER_STEPS);
 
   // Serial.print('$'); Serial.print(position); Serial.print(' '); Serial.print(dt1); Serial.print(' '); Serial.println(dt2);
 
@@ -124,21 +124,51 @@ bool SampleFont(char c, fp_t x, fp_t y)
     // uint8_t const height = pgm_read_byte(FONT + FONT_HEIGHT_OFFSET);
 
     // return SampleFont(c, roundFixed(x * width).getInteger(), roundFixed(y * height).getInteger());
-    constexpr fp_t FONT_STEP_X = 1.0 / FONT_W;
-    constexpr fp_t FONT_STEP_Y = 1.0 / FONT_H;
+    constexpr fp_t FONT_STEP_X = 1.0 / FONT_H;
+    constexpr fp_t FONT_STEP_Y = 1.0 / FONT_W;
 
     constexpr auto FONT_STEP_X_INT = FONT_STEP_X.getFraction();
     constexpr auto FONT_STEP_Y_INT = FONT_STEP_Y.getFraction();
 
-    auto const fx = x.getFraction();
-    auto const fy = y.getFraction();
+    auto const ix = x.getFraction();
+    auto const iy = y.getFraction();
 
-    return SampleFont(c, fy / FONT_STEP_Y_INT, fx / FONT_STEP_X_INT);
+    auto fx = iy / FONT_STEP_Y_INT;
+    auto fy = ix / FONT_STEP_X_INT;
+
+    if (fx >= FONT_W)
+    {
+      fx = FONT_W - 1;
+    }
+    if (fy >= FONT_H)
+    {
+      fy = FONT_H - 1;
+    }
+
+    return SampleFont(c, fx, fy);
+}
+
+void TryUpdateFakeEncoder()
+{
+  static uint32_t LAST_FAKE_ENCODER = 0;
+  static uint8_t LAST_FAKE_ENCODER_STATE = 0;
+  uint32_t const t = millis();
+  auto const dt = Duration(LAST_FAKE_ENCODER, t);
+  if (dt > 1000)
+  {
+    if (LAST_FAKE_ENCODER)
+    {
+      ENCODER.Update(t, dt, LAST_FAKE_ENCODER_STATE);
+    }
+    LAST_FAKE_ENCODER_STATE = (LAST_FAKE_ENCODER_STATE + 1) % ENCODER_STEPS;
+    LAST_FAKE_ENCODER = t;
+  }
 }
 
 void loop() {
   TryUpdateEncoder();
 
+  // TryUpdateFakeEncoder();
   uint32_t const t = millis();
 
   // if (Duration(LAST_REDRAW_TS, t) < 10)
@@ -218,58 +248,11 @@ void loop() {
       start = start + psy;
       istart = istart + ipsy;
   }
-  // ForEachDisplayPixel(angle, [&](Vec2 p, unsigned x, unsigned y)
-  // {
-  //   if (y == 0)
-  //   {
-  //     iystart = istart;
-  //   }
 
-  //   // auto const r = Sqrt(p.x * p.x + p.y * p.y);
-  //   // constexpr auto midpoint = (SCENE.R_OUT + SCENE.R_IN) / 2;
-  //   // if (absFixed(r - SCENE.R_IN) <= PIXEL_STEP * 2)
-  //   // {
-  //   //   led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
-  //   // }
-  //   // else
-  //   // {
-  //     // auto const tp = SECTOR_ROTATIONS.backward[sector].Apply(p);
-  //     // if (absFixed(tp.y) <= PIXEL_STEP * 2)
-  //     // {
-  //     //     DrawPoint(renderer, p);
-  //     // }
+  // char buf[10];
+  // auto const chars = sprintf(buf, "%d", int(sector));
 
-  //     auto const tp = iystart;
-
-  //     if (IsInBox(tp, SCENE.LL_TEXT, SCENE.UR_TEXT))
-  //     {
-  //         led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
-  //         // auto const bc = ToBox(tp, SCENE.LL_TEXT, SCENE.UR_TEXT);
-  //         // if (SampleFont('A' + sector, bc.x, bc.y))
-  //         // {
-  //         //     // DrawPoint(renderer, p);
-
-  //         //     led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
-  //         // }
-  //     }
-
-  //     if (y < 31)
-  //     {
-  //       iystart = iystart + ipsx;
-  //     }
-  //     else
-  //     {
-  //       istart = istart + ipsy;
-  //     }
-  //     // auto const tp = SECTOR_ROTATIONS.backward[sector].Apply(p);
-  //     // if (absFixed(tp.y) <= 0.01)
-  //     // {
-  //     //   led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
-  //     //   // asm volatile ("");
-  //     // }
-  //   // }
-
-  // });
+  // led_module.drawString(0, 0, buf, chars, GRAPHICS_TOGGLE);
 
   auto const tEnd = millis();
   Serial.println(Duration(tStart, tEnd));
