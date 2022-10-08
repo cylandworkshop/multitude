@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstdint>
-
 #ifndef __AVR
+
+#include <cstdint>
 
 #define PROGMEM
 

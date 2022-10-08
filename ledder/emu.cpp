@@ -67,7 +67,17 @@ bool SampleFont(char c, fp_t x, fp_t y)
     uint8_t const width = pgm_read_byte(FONT + FONT_WIDTH_OFFSET);
     uint8_t const height = pgm_read_byte(FONT + FONT_HEIGHT_OFFSET);
 
-    return SampleFont(c, roundFixed(x * width).getInteger(), roundFixed(y * height).getInteger());
+    // return SampleFont(c, roundFixed(x * width).getInteger(), roundFixed(y * height).getInteger());
+    constexpr fp_t FONT_STEP_X = 1.0 / FONT_W;
+    constexpr fp_t FONT_STEP_Y = 1.0 / FONT_H;
+
+    constexpr auto FONT_STEP_X_INT = FONT_STEP_X.getFraction();
+    constexpr auto FONT_STEP_Y_INT = FONT_STEP_Y.getFraction();
+
+    auto const fx = x.getFraction();
+    auto const fy = y.getFraction();
+
+    return SampleFont(c, fx / FONT_STEP_X_INT, fy / FONT_STEP_Y_INT);
 }
 
 constexpr size_t SCREEN_WIDTH = 16;
@@ -91,7 +101,7 @@ Vec2Base<size_t> CoordToScreen(Vec2 p)
 void DrawPoint(sdl::Renderer& renderer, Vec2 p)
 {
     auto [x, y] = CoordToScreen(p);
-    SDL_Rect rect{x - 2, y - 2, 4 , 4};
+    SDL_Rect rect{x - 1, y - 1, 3 , 3};
     renderer.fillRect(&rect);
 }
 
@@ -126,7 +136,7 @@ int main()
 
         auto const t = millis();
 
-        if (Duration(prevT, t) > 100)
+        if (Duration(prevT, t) > 1000)
         {
             ENCODER.Update(t, ENCODER.state + 2);
             prevT = t;
@@ -140,7 +150,6 @@ int main()
         }
 
         ENCODER_PREV_ANGLE = angle;
-
 
         renderer.setDrawColor(0xff, 0xff, 0xff, 0xff);
         renderer.clear();
@@ -163,13 +172,29 @@ int main()
 
         renderer.setDrawColor(0xff, 0x00, 0xff, 0xff);
 
+        auto const sector = AngleToSector(angle);
+
         ForEachDisplayPixel(angle, [&](Vec2 p, auto, auto)
         {
             auto const r = Sqrt(p.x * p.x + p.y * p.y);
             auto const midpoint = (SCENE.R_IN + SCENE.R_OUT) / 2;
-            if (absFixed(r - SCENE.R_IN) <= 2 * PIXEL_STEP || absFixed(r - SCENE.R_OUT) <= 2 * PIXEL_STEP)
+            if (absFixed(r - SCENE.R_IN) <= 1.5 * PIXEL_STEP || absFixed(r - SCENE.R_OUT) <= 1.5 * PIXEL_STEP)
             {
                 DrawPoint(renderer, p);
+            }
+
+            auto const tp = SECTOR_ROTATIONS.backward[sector].Apply(p);
+            // if (absFixed(tp.y) <= PIXEL_STEP * 2)
+            // {
+            //     DrawPoint(renderer, p);
+            // }
+            if (IsInBox(tp, SCENE.LL_TEXT, SCENE.UR_TEXT))
+            {
+                auto const bc = ToBox(tp, SCENE.LL_TEXT, SCENE.UR_TEXT);
+                if (SampleFont('A' + sector, bc.x, bc.y))
+                {
+                    DrawPoint(renderer, p);
+                }
             }
         });
 

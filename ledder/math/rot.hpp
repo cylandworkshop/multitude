@@ -6,8 +6,10 @@
 // precomputed rotation
 struct Rot2
 {
-    fp_t sina;
-    fp_t cosa;
+    fp_t sina{};
+    fp_t cosa{};
+
+    constexpr Rot2() = default;
 
     constexpr explicit Rot2(fp_t angle) noexcept
         : sina{Sin(angle)}

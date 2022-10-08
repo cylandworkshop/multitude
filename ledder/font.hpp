@@ -9,6 +9,8 @@ constexpr uint16_t FONT_HEIGHT_OFFSET = 3;
 constexpr uint16_t FONT_FIRST_CHAR_OFFSET =4;
 constexpr uint16_t FONT_CHAR_COUNT_OFFSET = 5;
 constexpr uint16_t FONT_DATA_OFFSET = 6;
+constexpr uint8_t FONT_W = 24;
+constexpr uint8_t FONT_H = 32;
 
 bool SampleFont(char c, uint8_t x, uint8_t y)
 {

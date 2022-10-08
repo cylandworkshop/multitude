@@ -23,6 +23,16 @@ void test_input() {
   Serial.println(digitalRead(ENC_1));
 }
 
+uint32_t Duration(uint32_t t0, uint32_t t1)
+{
+    if (t0 <= t1)
+    {
+        return t1 - t0;
+    }
+
+    return UINT32_MAX - t0 + t1;
+}
+
 int8_t scan_encoder(bool* encoder_state, bool* new_state) {
     int8_t change = 0;
 
@@ -61,12 +71,13 @@ int8_t scan_encoder(bool* encoder_state, bool* new_state) {
     encoder_state[0] = new_state[0];
     encoder_state[1] = new_state[1];
 
-    return change;   
+    return change;
 }
 
 void handle_encoder(bool endstop, bool enc_0, bool enc_1) {
   static int32_t encoder_value = 0;
-  
+  static uint32_t lastTimestamp = 0;
+
   static bool encoder_state[2] = {false, false};
   bool new_state[2] = {enc_0, enc_1};
   int32_t diff = scan_encoder(encoder_state, new_state);
@@ -76,7 +87,6 @@ void handle_encoder(bool endstop, bool enc_0, bool enc_1) {
     encoder_value = 0;
   }
 
-  
   int8_t beat = encoder_value/4; // 3/4, 4 measure = 12 beats
   static int8_t prev_beat = 0;
 
@@ -88,10 +98,24 @@ void handle_encoder(bool endstop, bool enc_0, bool enc_1) {
     }
   }
   prev_beat = beat;
-  
-    
+
+  const uint32_t t = millis();
+
+  if (lastTimestamp != 0 && diff != 0)
+  {
   // Serial.println("enc change");
-  Serial.print("#");Serial.write(encoder_value);Serial.println();
+    uint32_t dt = Duration(lastTimestamp, t);
+    if (dt >= UINT16_MAX)
+    {
+      dt = UINT16_MAX;
+    }
+    Serial.write('$');
+    Serial.write(int8_t(encoder_value));
+    Serial.write(uint8_t(dt));
+    Serial.write(uint8_t(dt >> 8));
+  }
+
+  lastTimestamp = t;
 }
 
 bool enc_0_state = false;
@@ -131,7 +155,7 @@ void setup() {
   pinMode(LED_2, OUTPUT);
 
   pinMode(SPEAKER, OUTPUT);
-  
+
   pinMode(STEP, OUTPUT);
   pinMode(DIR, OUTPUT);
 
@@ -157,7 +181,7 @@ void led_blink() {
   digitalWrite(LED_0, LOW);
 
   delay(1);
-  
+
   digitalWrite(LED_1, HIGH);
   delay(20);
   digitalWrite(LED_1, LOW);
@@ -183,10 +207,10 @@ void loop() {
   while(beep == 0 && timeout--) {
     delay(1);
   }
-  
+
   if(timeout > 0) {
-    Serial.println("#!");
-    
+    // Serial.println("#!");
+
     for(uint32_t i = 0; i < 30; i++) {
       digitalWrite(SPEAKER, HIGH);
       delayMicroseconds(beep == 1 ? 20 : 30);
@@ -195,15 +219,15 @@ void loop() {
     }
     digitalWrite(SPEAKER, LOW);
     led_blink();
-  
+
     beep = 0;
   } else {
-    Serial.println("#.");
+    // Serial.println("#.");
   }
-  
+
   // test_input();
 
-  
+
   /*for(uint32_t i = 0; i < 30; i++) {
     digitalWrite(SPEAKER, HIGH);
     delayMicroseconds(100);
@@ -227,6 +251,6 @@ void loop() {
   */
 
   // rotate_blink();
-  
+
   // delay(200);
 }

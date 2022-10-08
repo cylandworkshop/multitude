@@ -6,6 +6,17 @@ template<typename T>
 class Vec2Base
 {
 public:
+    template<typename U>
+    constexpr Vec2Base(Vec2Base<U> const& other) noexcept
+        : x{static_cast<U>(other.x)}
+        , y{static_cast<U>(other.y)}
+    {}
+
+    constexpr Vec2Base() noexcept
+        : x{0}
+        , y{0}
+    {}
+
     constexpr Vec2Base(T x, T y) noexcept
         : x{x}
         , y{y}
@@ -13,7 +24,7 @@ public:
 
     constexpr Vec2Base(Vec2Base const&) noexcept = default;
     constexpr Vec2Base(Vec2Base &&) noexcept = default;
-    constexpr Vec2Base<T>& operator=(Vec2Base<T> const& other) noexcept
+    Vec2Base<T>& operator=(Vec2Base<T> const& other) noexcept
     {
         x = other.x;
         y = other.y;
