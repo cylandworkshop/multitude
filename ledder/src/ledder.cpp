@@ -214,12 +214,12 @@ void loop() {
 
   for (unsigned i = 0; i < 16; ++i)
   {
-      Vec2 ystart = start;
+      // Vec2 ystart = start;
       Vec2 iystart = istart;
       for (unsigned j = 0; j < 32; ++j)
       {
           {
-            auto const p = ystart;
+            // auto const p = ystart;
             auto const tp = iystart;
             auto const x = i;
             auto const y = j;
@@ -234,19 +234,28 @@ void loop() {
                 // led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
                 // auto const bc = ToBox(tp, SCENE.LL_TEXT, SCENE.UR_TEXT);
                 auto const bc = ToBoxFont(tp, SCENE.LL_TEXT, SCENE.UR_TEXT);
-                if (SampleFont('A' + sector, bc.x, bc.y))
-                {
-                    // DrawPoint(renderer, p);
 
-                    led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
+                if (sector % 3 == 0)
+                {
+                  if (SampleFont('A' + sector / 3, bc.x, bc.y))
+                  {
+                      led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
+                  }
+                }
+                else
+                {
+                  if (bc.x >= FONT_W / 2 - 2 && bc.x <= FONT_W / 2 + 2 && bc.y >= 0 && bc.y <= FONT_H - 6)
+                  {
+                      led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
+                  }
                 }
             }
           }
-          ystart = ystart + psx;
+          // ystart = ystart + psx;
           iystart = iystart + ipsx;
       }
 
-      start = start + psy;
+      // start = start + psy;
       istart = istart + ipsy;
   }
 
