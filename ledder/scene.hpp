@@ -15,7 +15,7 @@ struct SCENE_FLOAT
 {
     static constexpr float MAX_R_MM = 2500;
     static constexpr float TABLE_HEIGHT_MM = 320;
-    static constexpr float TABLE_R_MM = 1800;
+    static constexpr float TABLE_R_MM = 1950;
     static constexpr float TABLE_HEIGHT = TABLE_HEIGHT_MM / MAX_R_MM;
     static constexpr float TABLE_WIDTH = TABLE_HEIGHT / 2;
     static constexpr float PIXEL_STEP = TABLE_HEIGHT / 31;
