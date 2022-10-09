@@ -12,73 +12,53 @@ uint32_t Duration(uint32_t t0, uint32_t t1)
     return UINT32_MAX - t0 + t1;
 }
 
+float Rational(float x)
+{
+    float _;
+    return modff(x, &_);
+}
+
 struct EncoderState
 {
     static constexpr float ALPHA = 0.05;
+    static constexpr int8_t ENCODER_OFFSET = 1;
     uint8_t state = 0;
     int8_t lastStepSize = 0;
     uint32_t lastUpdateTs = 0;
     uint32_t updateDurationCurrent = 0;
-    float updateDuration = 0;
+    float speed = 0;
+    float angle = 0;
 
     void Update(uint32_t ts, uint32_t dt, uint8_t step)
     {
-        if (state != step && (step > state || (state - step > ENCODER_STEPS / 2)))
+        step = (step + ENCODER_STEPS + ENCODER_OFFSET) % ENCODER_STEPS; // offset
+
+        if (step % 4 == 2 && state != step && (step > state || (state - step > ENCODER_STEPS / 2)))
         {
             updateDurationCurrent += dt;
             dt = updateDurationCurrent;
+            updateDurationCurrent = 0;
 
-            // if (dt > 100)
-            // {
-                updateDurationCurrent = 0;
-                updateDuration = ALPHA * dt + (1 - ALPHA) * updateDuration;
+            auto const dist = float(step > state ? step - state : ENCODER_STEPS - state + step) / ENCODER_STEPS;
+            state = step;
 
-                if (lastStepSize < 0)
-                {
-                    lastStepSize = 1;
-                }
+            auto const trueAngle = (1.0 / ENCODER_STEPS) * step;
+            auto const trueSpeed = dist / dt;
 
-                state = step;
-                lastUpdateTs = ts;
-            // }
-        }
-        else
-        {
+            lastUpdateTs = ts;
+            angle = trueAngle;
+            speed = ALPHA * trueSpeed + (1 - ALPHA) * speed;
+        } else {
             updateDurationCurrent += dt;
         }
     }
 
     float GetAngle(uint32_t t)
     {
-        uint32_t timeSinceLastUpdate = Duration(lastUpdateTs, t);
-
-        // uint32_t updateDuration = 0;
-        // for (size_t i = 0; i < DURATIONS_NUM; ++i)
-        // {
-        //     updateDuration += updateDurations[i];
-        // }
-
-        // updateDuration /= DURATIONS_NUM;
-
-        // float stepSign = lastStepSize > 0 ? 1.0 : -1.0;
-        float stepSign = 1;
-        float lerp = (updateDuration > 0) ?
-            (float(timeSinceLastUpdate) * stepSign) / (float(updateDuration)) :
-            1.0;
-
-        if (lerp < -1.0)
-        {
-            lerp = -1.0;
-        }
-
-        if (lerp > 1.0)
-        {
-            lerp = 1.0;
-        }
-
-        uint32_t newPos = (uint32_t(lerp) + state) % ENCODER_STEPS;
-        float _;
-        return (float(newPos) + modff(lerp, &_)) / float(ENCODER_STEPS);
+        uint32_t dt = Duration(lastUpdateTs, t);
+        float a = angle + dt * speed;
+        a = Rational(a);
+        return a;
     }
 };
 
