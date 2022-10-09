@@ -47,7 +47,7 @@ struct EncoderState
 
             lastUpdateTs = ts;
             angle = trueAngle;
-            speed = ALPHA * trueSpeed + (1 - ALPHA) * speed;
+            speed = speed == 0 ? trueSpeed : ALPHA * trueSpeed + (1 - ALPHA) * speed;
         } else {
             updateDurationCurrent += dt;
         }
