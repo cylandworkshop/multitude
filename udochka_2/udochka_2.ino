@@ -15,7 +15,10 @@ const uint32_t ENDSTOP = 2;
 
 const uint32_t SPEAKER = 5;
 
+constexpr uint8_t ENCODER_STEPS = 48;
+
 volatile uint8_t beep = 0;
+uint8_t activity = 0;
 
 void test_input() {
   Serial.print(digitalRead(ENDSTOP));
@@ -75,19 +78,28 @@ int8_t scan_encoder(bool* encoder_state, bool* new_state) {
 }
 
 void handle_encoder(bool endstop, bool enc_0, bool enc_1) {
-  static int32_t encoder_value = 0;
+  constexpr uint8_t STARTING_ENCODER_VALUE = -1;
+
+  static int8_t encoder_value = STARTING_ENCODER_VALUE;
   static uint32_t lastTimestamp = 0;
 
   static bool encoder_state[2] = {false, false};
   bool new_state[2] = {enc_0, enc_1};
-  int32_t diff = scan_encoder(encoder_state, new_state);
-  encoder_value += diff;
+  int8_t diff = scan_encoder(encoder_state, new_state);
+  encoder_value -= diff;
 
   if(endstop) {
-    encoder_value = 0;
+    encoder_value = STARTING_ENCODER_VALUE;
   }
 
-  int8_t beat = encoder_value/4; // 3/4, 4 measure = 12 beats
+  if (encoder_value < 0)
+  {
+    encoder_value += ENCODER_STEPS; 
+  }
+
+  encoder_value = encoder_value % ENCODER_STEPS;
+  
+  int8_t beat = encoder_value / 4; // 3/4, 4 measure = 12 beats
   static int8_t prev_beat = 0;
 
   if(beat != prev_beat) {
@@ -123,7 +135,13 @@ bool enc_1_state = false;
 bool endstop_state = false;
 
 void make_step() {
-  digitalWrite(STEP, HIGH);
+  static uint8_t step_counter = 0;
+
+  if (step_counter == 0)
+  {
+    digitalWrite(STEP, HIGH);
+  }
+
   {
     bool state = digitalRead(ENDSTOP);
     if(state != endstop_state) {
@@ -145,11 +163,18 @@ void make_step() {
       handle_encoder(endstop_state, enc_0_state, enc_1_state);
     }
   }
-  digitalWrite(STEP, LOW);
+
+  if (step_counter == 0)
+  {
+    digitalWrite(STEP, LOW);
+  }
+
+  step_counter = (step_counter + 1) % 3;
 }
 
 void setup() {
   pinMode(EN_12, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
   pinMode(LED_0, OUTPUT);
   pinMode(LED_1, OUTPUT);
   pinMode(LED_2, OUTPUT);
@@ -170,7 +195,7 @@ void setup() {
   Timer1.attachInterrupt(make_step);
 
   digitalWrite(EN_12, HIGH);
-
+  digitalWrite(LED_BUILTIN, HIGH);
   attachInterrupt(digitalPinToInterrupt(ENC_0), handle_encoder, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENC_1), handle_encoder, CHANGE);
 }
@@ -203,6 +228,25 @@ void drone() {
 }
 
 void loop() {
+  static uint32_t lastMotorToggle = 0;
+
+  auto const t = millis();
+  if (Duration(lastMotorToggle, t) >= 20000)
+  {
+    activity = (activity + 1) % 3;
+    if (activity == 0)
+    {
+      digitalWrite(EN_12, HIGH);
+      digitalWrite(LED_BUILTIN, HIGH);
+    }
+    else
+    {
+      digitalWrite(EN_12, LOW);
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    lastMotorToggle = t;
+  }
+  
   int16_t timeout = 500;
   while(beep == 0 && timeout--) {
     delay(1);
@@ -222,7 +266,7 @@ void loop() {
 
     beep = 0;
   } else {
-    // Serial.println("#.");
+    
   }
 
   // test_input();
