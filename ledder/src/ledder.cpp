@@ -12,6 +12,7 @@
 #include "math/fp.hpp"
 #include "math/rot.hpp"
 #include "math/sqrt.hpp"
+#include "math/inv.hpp"
 #include "scene.hpp"
 #include "encoder.hpp"
 
@@ -130,11 +131,14 @@ bool SampleFont(char c, fp_t x, fp_t y)
     constexpr auto FONT_STEP_X_INT = FONT_STEP_X.getFraction();
     constexpr auto FONT_STEP_Y_INT = FONT_STEP_Y.getFraction();
 
+    constexpr auto FONT_STEP_X_INV = FONT_STEP_X_INT % 2 == 0 ? MulInverse(FONT_STEP_X_INT - 1) : MulInverse(FONT_STEP_X_INT);
+    constexpr auto FONT_STEP_Y_INV = FONT_STEP_Y_INT % 2 == 0 ? MulInverse(FONT_STEP_Y_INT - 1) : MulInverse(FONT_STEP_Y_INT);
+
     auto const ix = x.getFraction();
     auto const iy = y.getFraction();
 
-    auto fx = iy / FONT_STEP_Y_INT;
-    auto fy = ix / FONT_STEP_X_INT;
+    auto fx = iy * FONT_STEP_Y_INV;
+    auto fy = ix * FONT_STEP_X_INV;
 
     if (fx >= FONT_W)
     {
@@ -265,7 +269,7 @@ void loop() {
   // led_module.drawString(0, 0, buf, chars, GRAPHICS_TOGGLE);
 
   auto const tEnd = millis();
-  Serial.println(Duration(tStart, tEnd));
+  // Serial.println(Duration(tStart, tEnd));
   // Serial.print('#'); Serial.print(numInBox);
   // Serial.println(int(SCENE.PIXEL_HALF_STEP > 0));
   // led_module.scanDisplayBySPI();
