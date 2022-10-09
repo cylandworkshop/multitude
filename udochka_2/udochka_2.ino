@@ -94,11 +94,11 @@ void handle_encoder(bool endstop, bool enc_0, bool enc_1) {
 
   if (encoder_value < 0)
   {
-    encoder_value += ENCODER_STEPS; 
+    encoder_value += ENCODER_STEPS;
   }
 
   encoder_value = encoder_value % ENCODER_STEPS;
-  
+
   int8_t beat = encoder_value / 4; // 3/4, 4 measure = 12 beats
   static int8_t prev_beat = 0;
 
@@ -231,9 +231,9 @@ void loop() {
   static uint32_t lastMotorToggle = 0;
 
   auto const t = millis();
-  if (Duration(lastMotorToggle, t) >= 20000)
+  if (false)
   {
-    activity = (activity + 1) % 3;
+    activity = (activity + 1) % 2;
     if (activity == 0)
     {
       digitalWrite(EN_12, HIGH);
@@ -246,7 +246,7 @@ void loop() {
     }
     lastMotorToggle = t;
   }
-  
+
   int16_t timeout = 500;
   while(beep == 0 && timeout--) {
     delay(1);
@@ -266,7 +266,7 @@ void loop() {
 
     beep = 0;
   } else {
-    
+
   }
 
   // test_input();
