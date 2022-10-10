@@ -4,6 +4,7 @@
 #include "math/vec.hpp"
 #include "math/sin.hpp"
 #include "math/rot.hpp"
+#include "math/inv.hpp"
 #include "font.hpp"
 
 constexpr uint8_t NUM_SECTORS = 12;
@@ -102,17 +103,24 @@ Vec2 ToBox(Vec2 const& v, Vec2 const& ll, Vec2 const& ur)
     return Vec2{x, y} / (SCENE.UR_TEXT - SCENE.LL_TEXT);
 }
 
-Vec2u ToBoxFont(Vec2 const& v, Vec2 const& ll, Vec2 const& ur)
+static uint32_t DISTORTION_MASKS[3][24] = {{}, {}, {}};
+
+uint8_t NthBit(uint32_t word, uint8_t n)
 {
-    constexpr fp_t FONT_X_STEP = SCENE_FLOAT::H_TEXT / FONT_H;
-    constexpr fp_t FONT_Y_STEP = SCENE_FLOAT::W_TEXT / FONT_W;
+  return ((uint32_t(1) << n) & word) >> n;
+}
+
+Vec2u ToBoxFont(Vec2 const& v, Vec2 const& ll, Vec2 const& ur, bool glitch)
+{
+    constexpr fp_t FONT_STEP_X = SCENE_FLOAT::H_TEXT / FONT_H;
+    constexpr fp_t FONT_STEP_Y = SCENE_FLOAT::W_TEXT / FONT_W;
 
     fp_t x, y;
     x = v.x - ll.x;
     y = v.y - ll.y;
 
-    auto fx = y.getFraction() / FONT_Y_STEP.getFraction();
-    auto fy = x.getFraction() / FONT_X_STEP.getFraction();
+    int16_t fx = y.getFraction() / FONT_STEP_X.getFraction();
+    int16_t fy = x.getFraction() / FONT_STEP_Y.getFraction();
 
     if (fx >= FONT_W)
     {
@@ -124,6 +132,39 @@ Vec2u ToBoxFont(Vec2 const& v, Vec2 const& ll, Vec2 const& ur)
         fy = FONT_H -1;
     }
 
+    if (glitch)
+    {
+        auto wordIdx = fx;
+        auto bitIdx = fy;
+
+        uint8_t b0 = NthBit(DISTORTION_MASKS[0][wordIdx], bitIdx);
+        uint8_t b1 = NthBit(DISTORTION_MASKS[1][wordIdx], bitIdx);
+        uint8_t b2 = NthBit(DISTORTION_MASKS[2][wordIdx], bitIdx);
+
+        uint8_t cw = b0 | (b1 << 1) | (b2 << 2);
+        switch (cw)
+        {
+        case 1:
+            fx = fx - 1;
+            break;
+        case 2:
+            fy = fy - 1;
+            break;
+        case 3:
+            fx = fx + 1;
+            break;
+        case 4:
+            fy = fy + 1;
+            break;
+        default:
+            break;
+        }
+
+        if (fx < 0) fx = 0;
+        if (fy < 0) fy = 0;
+        if (fx >= FONT_W) fx = FONT_W - 1;
+        if (fy >= FONT_H) fy = FONT_H - 1;
+    }
     return Vec2u{static_cast<uint8_t>(fx), static_cast<uint8_t>(fy)};
 }
 
