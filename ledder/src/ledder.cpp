@@ -296,7 +296,7 @@ void loop() {
                 bool const isLetter = sector % 3 == 0;
                 auto const bc = ToBoxFont(tp, SCENE.LL_TEXT, SCENE.UR_TEXT, isLetter);
 
-                if (sector % 3 == 0)
+                if (isLetter)
                 {
                   if (SampleFont('A' + sector / 3, bc.x, bc.y))
                   {
@@ -305,7 +305,7 @@ void loop() {
                 }
                 else
                 {
-                  if (bc.x >= FONT_W / 2 - 2 && bc.x <= FONT_W / 2 + 2 && bc.y >= 0 && bc.y <= FONT_H - 6)
+                  if (SampleFont('S', bc.x, bc.y))
                   {
                       led_module.writePixel(y, x, GRAPHICS_NORMAL, 1);
                   }
