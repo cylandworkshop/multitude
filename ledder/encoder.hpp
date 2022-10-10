@@ -21,8 +21,9 @@ float Rational(float x)
 struct EncoderState
 {
     static constexpr float ALPHA = 0.05;
-    static constexpr int8_t ENCODER_OFFSET = 1;
-    uint8_t state = 0;
+    static constexpr float ENCODER_OFFSET_STEPS = 0;
+    static constexpr float STEP_ANGLE = 1.0 / ENCODER_STEPS;
+    uint8_t state = 255;
     int8_t lastStepSize = 0;
     uint32_t lastUpdateTs = 0;
     uint32_t updateDurationCurrent = 0;
@@ -31,7 +32,12 @@ struct EncoderState
 
     void Update(uint32_t ts, uint32_t dt, uint8_t step)
     {
-        step = (step + ENCODER_STEPS + ENCODER_OFFSET) % ENCODER_STEPS; // offset
+        // step = (step + ENCODER_STEPS + ENCODER_OFFSET) % ENCODER_STEPS; // offset
+
+        if (state == 255)
+        {
+            state = step;
+        }
 
         if (step % 4 == 2 && state != step && (step > state || (state - step > ENCODER_STEPS / 2)))
         {
@@ -42,7 +48,7 @@ struct EncoderState
             auto const dist = float(step > state ? step - state : ENCODER_STEPS - state + step) / ENCODER_STEPS;
             state = step;
 
-            auto const trueAngle = (1.0 / ENCODER_STEPS) * step;
+            auto const trueAngle = Rational(1.0 + STEP_ANGLE * (float(step) + ENCODER_OFFSET_STEPS));
             auto const trueSpeed = dist / dt;
 
             lastUpdateTs = ts;
