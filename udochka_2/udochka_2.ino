@@ -136,12 +136,20 @@ bool endstop_state = false;
 
 void make_step() {
   static uint8_t step_counter = 0;
+  static bool step_high = true;
 
   if (step_counter == 0)
   {
-    digitalWrite(STEP, HIGH);
+    digitalWrite(STEP, step_high ? HIGH : LOW);
   }
 
+  step_high = !step_high;
+  if (!step_high)
+  {
+    return;
+  }
+  step_counter = (step_counter + 1) % 3;
+  
   {
     bool state = digitalRead(ENDSTOP);
     if(state != endstop_state) {
@@ -164,12 +172,6 @@ void make_step() {
     }
   }
 
-  if (step_counter == 0)
-  {
-    digitalWrite(STEP, LOW);
-  }
-
-  step_counter = (step_counter + 1) % 3;
 }
 
 void setup() {
@@ -191,7 +193,7 @@ void setup() {
 
   Serial.begin(9600);
 
-  Timer1.initialize(1500);
+  Timer1.initialize(750);
   Timer1.attachInterrupt(make_step);
 
   digitalWrite(EN_12, HIGH);
